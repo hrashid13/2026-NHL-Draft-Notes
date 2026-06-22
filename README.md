@@ -1,6 +1,15 @@
-**2026 NHL Draft**
+# 2026 NHL Draft Notes
 
-**Top 45 Prospect Scouting Reports**
+This is my 2026 NHL draft notes, just my top 45 prospects
+
+Link to the Google Doc can be seen here: https://docs.google.com/document/d/1H7_YdZhDkv4V109fTQKmB8ZWzh2IVdVBn1GkFvm7Ss0/edit?usp=sharing
+
+Note some sources are behind a paywall. 
+
+#
+
+
+# 2026 NHL Draft Top 45 Prospect Scouting Reports
 
 ## **1\. Gavin McKenna**
 
