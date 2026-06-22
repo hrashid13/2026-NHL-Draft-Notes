@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 NHL Draft Interactive Scout Board</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-card: #ffffff;
+    --text: #111111;
+    --text-secondary: #555555;
+    --text-muted: #888888;
+    --border: #e0e0e0;
+    --border-hover: #aaaaaa;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --purple-bg: #EEEDFE; --purple-text: #3C3489;
+    --amber-bg: #FAEEDA; --amber-text: #633806;
+    --red-bg: #FCEBEB; --red-text: #791F1F;
+    --green-bg: #EAF3DE; --green-text: #27500A;
+    --gray-bg: #f0f0f0; --gray-text: #555555;
+  }
+
+  body {
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  header {
+    background: #0a1628;
+    color: #ffffff;
+    padding: 20px 28px 16px;
+    border-bottom: 3px solid #1e5fa8;
+  }
+
+  header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
+  }
+
+  header p {
+    font-size: 12px;
+    color: #8aaacf;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .toolbar {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .toolbar input[type="search"] {
+    flex: 1;
+    min-width: 180px;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  .toolbar input[type="search"]:focus { border-color: #1e5fa8; box-shadow: 0 0 0 2px rgba(30,95,168,0.15); }
+
+  .toolbar select {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+  }
+  .toolbar select:focus { border-color: #1e5fa8; }
+
+  .stats-bar {
+    padding: 10px 28px;
+    display: flex;
+    gap: 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+  .stats-bar strong { color: var(--text); font-size: 16px; font-weight: 600; margin-right: 3px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 12px;
+    padding: 20px 28px;
+    max-width: 1600px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .card:hover { border-color: var(--border-hover); box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .card.expanded { border-color: #1e5fa8; box-shadow: 0 0 0 1px #1e5fa8; }
+
+  .card-header { display: flex; align-items: flex-start; gap: 12px; }
+
+  .rank {
+    font-size: 26px;
+    font-weight: 700;
+    color: #d0d0d0;
+    min-width: 36px;
+    line-height: 1;
+    padding-top: 2px;
+  }
+  .rank.top6 { color: #c0392b; }
+  .rank.top15 { color: #e67e22; }
+  .rank.top30 { color: #1e5fa8; }
+
+  .prospect-info { flex: 1; min-width: 0; }
+
+  .name { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.2; }
+
+  .meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .b-F { background: var(--blue-bg); color: var(--blue-text); }
+  .b-D { background: var(--purple-bg); color: var(--purple-text); }
+  .b-hand { background: var(--gray-bg); color: var(--gray-text); }
+  .b-league { background: var(--amber-bg); color: var(--amber-text); }
+  .b-t1 { background: var(--red-bg); color: var(--red-text); }
+  .b-t2 { background: var(--amber-bg); color: var(--amber-text); }
+  .b-t3 { background: var(--blue-bg); color: var(--blue-text); }
+  .b-t4 { background: var(--gray-bg); color: var(--gray-text); }
+
+  .comp { font-size: 12px; color: var(--text-muted); font-style: italic; margin-top: 6px; }
+  .comp strong { color: var(--text-secondary); font-style: normal; font-weight: 600; }
+
+  .toggle-btn {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 11px;
+    color: #1e5fa8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: inherit;
+    text-decoration: none;
+    border-bottom: 1px dashed #1e5fa8;
+  }
+
+  .details {
+    display: none;
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .card.expanded .details { display: block; }
+
+  .section { margin-bottom: 12px; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+  }
+
+  .section-text { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+
+  .bottom-line {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.55;
+    font-style: italic;
+    background: #f0f6ff;
+    border-left: 3px solid #1e5fa8;
+    padding: 8px 12px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  .sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+  .src-link {
+    font-size: 11px;
+    color: #1e5fa8;
+    text-decoration: none;
+    padding: 2px 8px;
+    border: 1px solid #b0cde8;
+    border-radius: 4px;
+    background: #f0f6ff;
+  }
+  .src-link:hover { background: #dceeff; }
+
+  .empty { text-align: center; padding: 4rem; color: var(--text-muted); font-size: 14px; grid-column: 1/-1; }
+
+  @media (max-width: 600px) {
+    header, .toolbar, .stats-bar, .grid { padding-left: 14px; padding-right: 14px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>2026 NHL Draft Interactive Scout Board</h1>
+  <p>Top 45 Prospect Scouting Reports · Personal Notes</p>
+</header>
+
+<div class="toolbar">
+  <input type="search" id="search" placeholder="Search by name, team, or comp…" oninput="render()">
+  <select id="posFilter" onchange="render()">
+    <option value="">All positions</option>
+    <option value="F">Forwards</option>
+    <option value="D">Defense</option>
+  </select>
+  <select id="handFilter" onchange="render()">
+    <option value="">Either hand</option>
+    <option value="L">Left shot</option>
+    <option value="R">Right shot</option>
+  </select>
+  <select id="leagueFilter" onchange="render()">
+    <option value="">All leagues</option>
+    <option value="OHL">OHL</option>
+    <option value="WHL">WHL</option>
+    <option value="QMJHL">QMJHL</option>
+    <option value="NCAA">NCAA</option>
+    <option value="SHL">SHL</option>
+    <option value="USHL">USHL</option>
+    <option value="NTDP">NTDP</option>
+    <option value="Liiga">Liiga</option>
+    <option value="Other">Other</option>
+  </select>
+  <select id="tierFilter" onchange="render()">
+    <option value="">All tiers</option>
+    <option value="1">Tier 1 (1–6)</option>
+    <option value="2">Tier 2 (7–15)</option>
+    <option value="3">Tier 3 (16–30)</option>
+    <option value="4">Tier 4 (31–45)</option>
+  </select>
+</div>
+
+<div class="stats-bar">
+  <span><strong id="s-total">45</strong> prospects</span>
+  <span><strong id="s-f">–</strong> forwards</span>
+  <span><strong id="s-d">–</strong> defense</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const prospects = [
+  {rank:1,name:"Gavin McKenna",pos:"F",posRaw:"LW",hand:"L",league:"NCAA",team:"Penn State (NCAA)",size:`5'11", 170`,comp:"Clayton Keller",
+   headline:"The only player most evaluators consider a potential franchise-changer.",
+   strengths:"Elite, possibly best playmaking, vision and deception; great edgework, escapability and puck control along the wall; controls game pace; was setting up chances at a historic rate for an NCAA draft-year player. Finished 51 pts in 35 games, won the Big Ten scoring title with a great second half.",
+   weaknesses:"Plays soft along the boards; perimeter tendencies and quiet even-strength stretches early at Penn State; needs strength; defensive effort has been questioned, but has gotten better; undersized.",
+   bottom:"Slow start created noise, but he answered it. Deals with off ice issues well (WJC noise, off ice incident) which is perfect for Toronto",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-gavin-mckenna-lw-penn-state-university-ncaa/"],["ESPN","https://www.espn.com/nhl/story/_/id/48675276/gavin-mckenna-penn-state-expected-no-1-pick-upcoming-nhl-draft"],["Elite Prospects","https://www.eliteprospects.com/news/2026-nhl-draft/whats-going-on-with-gavin-mckenna-at-penn-state"]]},
+
+  {rank:2,name:"Ivar Stenberg",pos:"F",posRaw:"LW/RW",hand:"L",league:"SHL",team:"Frölunda HC (SHL)",size:`5'11", 183`,comp:"William Nylander",
+   headline:"The class's most pro-ready forward; a legitimate 1-vs-2 debate with McKenna.",
+   strengths:"Elite hockey sense and processing; great playmaking and vision second to McKenna although it is close; high-end puck skill; genuinely reliable two-way game and forechecking, which is rare for a top forward. Played vs men, put up 33 pts in 43 SHL games which is the most by an 18-year-old since the Sedins, plus WJC gold and a Champions Hockey League title.",
+   weaknesses:"Skating/explosiveness is only average not a burner, struggles to push defenders back; lives on the perimeter at even strength and doesn't get inside consistently; not physical and can shy from contact; many tools are high-end but few are truly elite.",
+   bottom:"The safest high-end bet here, a plug-and-play top-six winger and Calder candidate with a 60–90 point range, maybe slightly lower ceiling great player though.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-ivar-stenberg-lw-frolunda-shl/"],["Daily Faceoff","https://www.dailyfaceoff.com/news/ivar-stenberg-2026-nhl-draft-profile-scouting-report"],["DobberProspects","https://dobberprospects.com/player/ivar-stenberg/"]]},
+
+  {rank:3,name:"Caleb Malhotra",pos:"F",posRaw:"C",hand:"L",league:"OHL",team:"Brantford Bulldogs (OHL)",size:`6'2", 185`,comp:"Lundell / Beniers / Suzuki",
+   headline:"The first center likely off the board and the biggest riser among forwards. Son of Manny Malhotra, current Canucks head coach (who have the third overall pick) and nephew of Steve Nash.",
+   strengths:"Elite hockey IQ and 200-foot detail; relentless motor; wins puck battles and works the net-front; processes a step ahead, especially defensively. Exploded for 84 pts (29G) in 67 games as an OHL rookie, then 26 pts in 15 playoff games (13 goals which is 4th-most by an OHL rookie ever).",
+   weaknesses:"Average-plus skating with no real separation gear; needs strength; faceoffs are a work in progress; offense is more connective/support-based than dynamic creation, which is fine but a team picking high may need him to create more; production was partly a product of a stacked Brantford team.",
+   bottom:"High-floor, high-character two-way center, the \"win games\" pick. Going to play at BU next season, will be better competition than the OHL.",
+   sources:[["Daily Faceoff","https://www.dailyfaceoff.com/news/caleb-malhotra-2026-nhl-draft-profile-scouting-report"],["Bleacher Report","https://bleacherreport.com/articles/25432237-2026-nhl-mock-draft-caleb-malhotra-scouting-report"],["mynhldraft.com","http://www.mynhldraft.com/2026-nhl-draft/player-profiles/Caleb-Malhotra"]]},
+
+  {rank:4,name:"Chase Reid",pos:"D",posRaw:"D (RH)",hand:"R",league:"OHL",team:"Soo Greyhounds (OHL)",size:`6'2", 190`,comp:"Evan Bouchard",
+   headline:"CHL Top Prospect Award winner with a huge rise from the NAHL.",
+   strengths:"Elite, NHL-ready skating and edges; the best in the class at turning defense into offense; high-end processing and poise under pressure; offensive creativity and PP-QB ability; physical strength and reach. 18G, 48 pts in 35 games despite a wrist injury; strong WJC for USA.",
+   weaknesses:"Defensive reads and positioning are a work in progress, chases the play and gets out of position at times but can make up for it in skating at the junior level; some indecision defending rushes; not polished yet.",
+   bottom:"Highest two-way ceiling among the D; MSU-bound next year should be better competition",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-chase-reid-d-sault-ste-marie-greyhounds-ohl/"],["Daily Faceoff","https://www.dailyfaceoff.com/news/2026-nhl-draft-chase-reid-top-defenseman-san-jose-sharks-soo-greyhounds"],["Elite Prospects","https://www.eliteprospects.com/player/576955/chase-reid/scouting-report"]]},
+
+  {rank:5,name:"Carson Carels",pos:"D",posRaw:"D (LH)",hand:"L",league:"WHL",team:"Prince George Cougars (WHL)",size:`6'2", 198`,comp:"Werenski / Sanderson",
+   headline:"Craig Button's pick as the first D off the board; a young, complete two-way blueliner.",
+   strengths:"Elite four-way skating, edgework and explosiveness; genuine compete and a mean streak; physical; quarterbacked PG's power play; very good passer and transporter; can score (20G, 73 pts in 58 games, ~25–28 min/night). Made Canada's WJC team as an underager.",
+   weaknesses:"Consistency is the main one; some trackers flag him as flat-footed/inactive in defensive transition; offensively more facilitator than primary creator, which is fine; occasional decision-making lapses.",
+   bottom:"As complete a defenseman as this class offers; top-pair upside. North Dakota-bound next year, the highest floor of the big 3 defenseman.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-carson-carels-d-prince-goerge-cougars-whl/"],["NHL.com","https://www.nhl.com/news/topic/nhl-draft/chase-reid-carson-carels-keaton-verhoeff-among-best-defensemen-in-2026-nhl-draft"],["The Hockey Writers","https://thehockeywriters.com/carson-carels-2026-nhl-draft-prospect-profile/"]]},
+
+  {rank:6,name:"Keaton Verhoeff",pos:"D",posRaw:"D (RH)",hand:"R",league:"NCAA",team:"North Dakota (NCAA)",size:`6'4", 208`,comp:"Ekblad / Dobson",
+   headline:"The coveted archetype: big right-shot D with offense and one of the youngest players in the draft.",
+   strengths:"Near-elite shot and release; defends the blue line as well as anyone in the class (lots of stick checks); strong gap control, size and poise; offensive-zone vision. Logged big minutes as a 17-year-old freshman (20 pts in 36 games) and made Canada's WJC team underage.",
+   weaknesses:"Skating isn't elite (mobile for his size, not dynamic); needs to play at a quicker pace, especially on breakouts; decision-making can get exposed against heavy forechecks (struggled at the Frozen Four); offensive game still raw and production tailed off late.",
+   bottom:"Enormous long-term upside but more of a project than his frame suggests; likely returns to UND. Played against better competition than the other 2 defenseman, and because of this struggled a little more.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-keaton-verhoeff-d-university-north-dakota-ncaa/"],["Daily Faceoff","https://www.dailyfaceoff.com/news/keaton-verhoeff-2026-nhl-draft-u-18-world-championship-scouting-report-north-dakota"],["Broad Street Hockey","https://www.broadstreethockey.com/post/bsh-2026-community-draft-board-no-4-keaton-verhoeff-can-be-what-every-team-wants/"]]},
+
+  {rank:7,name:"Viggo Björck",pos:"F",posRaw:"C/RW",hand:"L",league:"SHL",team:"Djurgården IF (SHL)",size:`5'10", 172`,comp:"McMichael / Kane (style)",
+   headline:"Possibly the most overlooked high-ceiling player in the class.",
+   strengths:"Elite hockey IQ, plays two steps ahead; slick, creative playmaking and a pro-level shot; relentless work rate and real two-way commitment; battles and goes to the net despite his size. Became Djurgården's first-line center down the stretch and into the playoffs as a 17-year-old, had a great WJC.",
+   weaknesses:"Size (undersized for center, especially a number 1); skating is quick/light rather than explosive — first steps need work; can drift to the perimeter; will likely slide on size/speed concerns.",
+   bottom:"A 60+ point two-way center bet with a high ceiling to be better.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-viggo-bjorck-c-djurgarden-shl/"],["The Hockey Writers","https://thehockeywriters.com/viggo-bjorck-2026-nhl-draft-prospect-profile/"],["Broad Street Hockey","https://www.broadstreethockey.com/post/2026-bsh-community-draft-board-no-6-viggo-bjorck-is-the-most-overlooked-prospect-this-year/"]]},
+
+  {rank:8,name:"Alberts Smits",pos:"D",posRaw:"D (LH)",hand:"L",league:"Other",team:"Jukurit (Liiga) / EHC München (DEL)",size:`6'3", 205`,comp:"Hedman lite",
+   headline:"The \"proof-of-concept\" prospect, left Latvia alone at 13 and already played the Olympics, Worlds and pro hockey.",
+   strengths:"Rare size + mobility; \"skates like the wind\"; pro-ready defending; excellent hockey IQ and first passes; leads the rush; good shot; held his own against NHLers at the Olympics (the only draft-eligible player there) and led Latvia's D in ice time at the Worlds. BEAST",
+   weaknesses:"Wants a more consistent physical streak; offensive game vs. men is still developing, but it's fine; some debate about competition/sample. Apparently has attitude issues",
+   bottom:"I like him more than others, I see massive potential in him and it is impressive he has played vs men instead of racking up huge totals vs lesser competition.",
+   sources:[["NHL.com","https://www.nhl.com/news/alberts-smits-2026-nhl-draft-stock-on-rise-after-playing-for-latvia-in-olympics"],["All About The Jersey","https://www.allaboutthejersey.com/2026-nhl-draft-prospects/70159/albert-smits-carsen-carels-xavier-villeneuve-2026-left-shot-defensemen-draft-profiles"],["Scouching","https://www.scouching.ca/the-blog/preliminary-2026-ranking"]]},
+
+  {rank:9,name:"Nikita Klepov",pos:"F",posRaw:"RW/F",hand:"L",league:"OHL",team:"Saginaw Spirit (OHL)",size:`6'0", 178`,comp:"Kyle Connor",
+   headline:"The OHL's scoring leader (97 pts) a gifted playmaker",
+   strengths:"Elite puck skill, playmaking and vision, rivals McKenna and Stenberg; legit power-play skill with little fakes/hesitations; calm and composed; cuts through defenders; improved as a 5-on-5 shooter/finisher this year; competes for loose pucks.",
+   weaknesses:"Clunky stride and skater with poor lower-body connection and balance; vulnerable in transition; not physical and needs strength; defensive detail ranges.",
+   bottom:"A skilled scoring winger whose skating is the swing factor; mid-first. MSU-bound next year.",
+   sources:[["All About The Jersey","https://www.allaboutthejersey.com/devils-issues-views-and-ge/69939/nikita-klepov-2026-nhl-draft-prospect-profile-a-gifted-playmaker-with-incredible-puck-skills"],["The Hockey Writers","https://thehockeywriters.com/nikita-klepov-2026-nhl-draft-prospect-profile/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:10,name:"Daxon Rudolph",pos:"D",posRaw:"D (RH)",hand:"R",league:"WHL",team:"Prince Albert Raiders (WHL)",size:`6'2", 205`,comp:"Noah Hanifin",
+   headline:"A smart, poised right-shot who flew a bit under the radar behind Reid/Verhoeff/Carels.",
+   strengths:"High-end hockey sense and three-zone poise; elite passing and a cannon of a shot; excellent at setting up one-timers; plays a simple, effective game with great feel for pressure. Set a Prince Albert record with 28 goals (78 pts in 68 games) and played a shutdown role internationally for Canada.",
+   weaknesses:"Passive (!!!) tends to anticipate and hang back rather than dictate; prefers sealing lanes to leaning on people; not physical. Needs to learn how to maximize his tools at the NHL level",
+   bottom:"Top-four-upside RHD; end-of-top-10 to mid-first range. Not as high potential as the big 3 but a great player.",
+   sources:[["All About The Jersey","https://www.allaboutthejersey.com/2026-nhl-draft-prospects/70304/chase-reid-keaton-verhoeff-daxon-rudolph-ryan-lin-2025-right-shot-defenseman-profiles"],["NHL.com","https://www.nhl.com/news/topic/nhl-draft/chase-reid-carson-carels-keaton-verhoeff-among-best-defensemen-in-2026-nhl-draft"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:11,name:"Tynan Lawrence",pos:"F",posRaw:"C",hand:"L",league:"NCAA",team:"Boston University (NCAA)",size:`6'0", 185`,comp:"Nick Schmaltz",
+   headline:"A high-end skater whose midseason jump to BU stalled his production.",
+   strengths:"Excellent, elite, explosive skating; reliable two-way game; a \"transition machine\" (because of his skating) with strong closing speed and a relentless motor; smart connective plays. Dominated the USHL (71 pts in 69 games) and was Muskegon's playoff MVP.",
+   weaknesses:"The NCAA jump exposed him, only 7 pts in 18 BU games and it feels he wasn't ready; playmaking needs to be worked on; not physically ready for the pros.",
+   bottom:"Tools say second-line center; a full BU season should help. Wide ranking range. Project player who has an unteachable valuable tool (Skating)",
+   sources:[["NBC Sports Philadelphia","https://www.nbcsportsphiladelphia.com/nhl/philadelphia-flyers/nhl-draft-2026-tynan-lawrence-scouting-report-second-line-center-upside/735568/"],["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-tynan-lawrence-c-boston-university/"],["NHL.com","https://www.nhl.com/news/nhl-mock-draft-after-2026-scouting-combine"]]},
+
+  {rank:12,name:"Ryan Lin",pos:"D",posRaw:"D (RH)",hand:"R",league:"WHL",team:"Vancouver Giants (WHL)",size:`5'11", 162`,comp:"Lane Hutson",
+   headline:"A dynamic, undersized, puck-moving D in the Hutson/Quinn Hughes mold.",
+   strengths:"Elite edgework and skating; excellent transition puck-carrier; creative offense and reads the game above his slot; very polished offensively for a defenseman; very athletic, tested well.",
+   weaknesses:"Size, too small; defensive game (pivots, corners) is a work in progress; dealt with injuries (Concerning because of size at the NHL level); a real upside-vs-risk swing.",
+   bottom:"High-ceiling offensive D bet, but has defensive concerns; BU-bound so will be interesting to see how he fairs in the NCAA",
+   sources:[["All About The Jersey","https://www.allaboutthejersey.com/2026-nhl-draft-prospects/70304/chase-reid-keaton-verhoeff-daxon-rudolph-ryan-lin-2025-right-shot-defenseman-profiles"],["NHL.com","https://www.nhl.com/news/nhl-mock-draft-after-2026-scouting-combine"],["The Hockey Writers","https://thehockeywriters.com/2026-nhl-draft-guide/"]]},
+
+  {rank:13,name:"Ethan Belchetz",pos:"F",posRaw:"LW",hand:"L",league:"OHL",team:"Windsor Spitfires (OHL)",size:`6'5", 227`,comp:"Nichushkin",
+   headline:"A genuine power-forward \"wrecking ball.\" Wears No. 61 for Rick Nash",
+   strengths:"Massive frame and physical dominance; net-front and forecheck power; goal-scoring instincts (34G, 59 pts in 57 games); improving passing, solid IQ and short agility. A high-volume hitter who impacts almost every shift.",
+   weaknesses:"Skating (!!!) mediocre edges/top speed that fades as games go on; not a transition driver more of an offensive zone beast (which is fine); reads with the puck are inconsistent, still learning; conditioning feels like a concern. Had a season-ending clavicle injury, which is concerning because of his play style.",
+   bottom:"A power winger with top-six finishing upside. MSU-bound next year, may get overdrafted because of size and play style",
+   sources:[["Daily Faceoff","https://www.dailyfaceoff.com/news/ethan-belchetz-scouting-report-2026-nhl-draft-prospect-windsor-spitfires-ohl-chl"],["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-ethan-belchetz-lw-windsor-spirtfires-ohl/"],["NHL.com (CBJ consensus)","https://www.nhl.com/bluejackets/news/nhl-draft-consensus-rankings-2026-blue-jackets"]]},
+
+  {rank:14,name:"Alexander Command",pos:"F",posRaw:"C",hand:"L",league:"Other",team:"Örebro HK (SHL/U20)",size:`6'1", 187`,comp:"Patrice Bergeron (self-comp)",
+   headline:"A high-floor, high-compete two-way center",
+   strengths:"Elite mindset, work ethic and compete; detailed 200-foot game; sound skating with a strong lower-body base; momentum-sustainer who wins board battles and protects pucks; faceoffs. Centered Sweden's top line to U18 gold (7 pts in 7). Reliable, know what you are getting player",
+   weaknesses:"Average top-end speed; lacks the dynamic \"wow\" upside of the higher forwards, more connector than creator.",
+   bottom:"Reliable middle-six two-way center; rising into first-round range.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-alexander-command-c-orebro-hk-u20-u20-nationell/"],["Philadelphia Inquirer","https://www.inquirer.com/flyers/nhl-draft-alexander-command-sweden-center-first-round-20260622.html"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"]]},
+
+  {rank:15,name:"Oscar Hemming",pos:"F",posRaw:"F/LW",hand:"L",league:"NCAA",team:"Boston College (NCAA)",size:`6'3", 200`,comp:"Mark Stone",
+   headline:"Big, skilled winger who had a chaotic season. Brother Emil was a 2024 Stars first-rounder.",
+   strengths:"Excellent skater for his size (!!!); high motor and awareness on the forecheck with intentional physicality; a near pro-ready shot and a dangerous one-timer; net-front/tip game, great goalscorer with multiple ways to score; high floor as a defensively strong winger.",
+   weaknesses:"Pace concerns; tiny NCAA sample (8 pts in 19); modest production; nothing noteworthy in the playmaking department.",
+   bottom:"His Finnish club blocked an OHL move, so he joined BC midyear, this hurt him a lot. A full year at BC should accelerate him; mid-first upside.",
+   sources:[["Bleacher Report","https://bleacherreport.com/articles/25443729-updated-2026-nhl-mock-draft-after-blockbuster-brady-tkachuk-trade"],["NHL.com","https://www.nhl.com/news/nhl-mock-draft-after-2026-scouting-combine"]]},
+
+  {rank:16,name:"Adam Novotný",pos:"F",posRaw:"LW/RW",hand:"L",league:"OHL",team:"Peterborough Petes (OHL)",size:`6'1", 205`,comp:"Timo Meier",
+   headline:"Peterborough's leading scorer and a well-rounded power winger.",
+   strengths:"Two-way smarts and has a battler's mindset and real physicality; led the Petes in goals (34) and points (65); gets rewarded around the net.",
+   weaknesses:"Not elite-dynamic; needs consistency especially offensively; relies a lot on positioning in goal scoring; More of a two-way guy",
+   bottom:"Solid scoring winger; mid-first to early-second range; higher floor not a high ceiling",
+   sources:[["The Hockey Writers (Baracchini)","https://thehockeywriters.com/2026-nhl-draft-baracchinis-top-128-final-rankings/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"]]},
+
+  {rank:17,name:"J.P. Hurlbert",pos:"F",posRaw:"C/LW (RH)",hand:"R",league:"WHL",team:"Kamloops Blazers (WHL)",size:`5'11", 185`,comp:"Nikolaj Ehlers",
+   headline:"WHL Rookie of the Year (42G, 97 pts) skilled scorer",
+   strengths:"Deception and elusiveness; a true dual threat as shooter and passer; elite, quick release he can fire from any body position (!!!); high IQ finds lanes.",
+   weaknesses:"Skating isn't a strength (not fast); shot isn't heavy, worry if his shot is pro ready; can be passive without the puck and needs to add power.",
+   bottom:"Some had him in top-10 conversation, I am higher on him than others.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-j-p-hurlbert-lw-c-kamloops-blazers-whl/"],["Pittsburgh Hockey Now","https://pittsburghhockeynow.com/potential-pittsburgh-penguins-2026-nhl-draft-targets-scouting-averages-out-reach/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:18,name:"Liam Ruck",pos:"F",posRaw:"RW (RH)",hand:"R",league:"WHL",team:"Medicine Hat Tigers (WHL)",size:`5'11", 174`,comp:"Brock Boeser",
+   headline:"A pure sniper one of the twins",
+   strengths:"High-end finishing and shot; great scoring instincts; 45 goals and 104 points in 68 games (plus 8 goals in 14 playoff games). CHL Top Scorer Award finalist.",
+   weaknesses:"Size/strength, a little small but not tiny; not a high-end skater; more of a finisher than a play-driver, which is fine",
+   bottom:"Goal-scoring winger, but not necessarily a play driver. Complementary player",
+   sources:[["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"],["Pittsburgh Hockey Now","https://pittsburghhockeynow.com/potential-pittsburgh-penguins-2026-nhl-draft-targets-scouting-averages-out-reach/"]]},
+
+  {rank:19,name:"Elton Hermansson",pos:"F",posRaw:"RW/LW (RH)",hand:"R",league:"Other",team:"MoDo (HockeyAllsvenskan)",size:`6'1", 181`,comp:"Eduard Sale",
+   headline:"The most naturally skilled player in his range",
+   strengths:"Dynamite dangler and elite playmaker/finisher; above-average skating and edge control, but not quite elite; can push the rush and turn the cycle dangerous; some physical edge. Won U18 gold and earned \"Best Forward\" honors; most goals by a U21 draft-eligible player in the Allsvenskan.",
+   weaknesses:"Effort/engagement is inconsistent. coasts when not challenged (biggest issue, he loafed at the U18s while still leading in points); weak defensive-zone commitment; needs strength and legit coaching",
+   bottom:"Top-six skill ceiling but real compete questions, feels like a big game player, but is he going to show up in game 46 in February? Does that matter?",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-elton-hermansson-rw-modo-hockeyallsvenskan/"],["The Hockey Writers","https://thehockeywriters.com/2026-nhl-draft-top-10-swedish-prospects/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:20,name:"Maddox Dagenais",pos:"F",posRaw:"C",hand:"L",league:"QMJHL",team:"Québec Remparts (QMJHL)",size:`6'4", 196`,comp:"Danny Nelson",
+   headline:"A big, fast goal-scoring \"wrecking ball.\"",
+   strengths:"Rare size-plus-speed/explosiveness; a possession machine who rarely loses the puck on the rush (!!!); physical (reverse hits); long reach for tips; shoot-first with a good release; improved playmaking and speed management (30G, 62 pts).",
+   weaknesses:"Shot selection/IQ seems lacking and a relative lack of high-end skill; may transition to wing in NHL, which is fine; small sample of dominant play, quieted in the QMJHL playoffs and looked complementary at the U18s, which is fine",
+   bottom:"High-upside power forward; late-first to second. A lot of potential for a true number 1 center but needs work",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-maddox-dagenais-c-quebec-remparts-qmjhl/"],["Daily Faceoff","https://www.dailyfaceoff.com/news/maddox-dagenais-2026-nhl-draft-scouting-report-prospect-quebec-remparts-qmjhl-under-18-team-canada"],["Broad Street Hockey","https://www.broadstreethockey.com/post/bsh-2026-community-draft-board-no-23-maddox-dagenais-could-be-a-steal/"]]},
+
+  {rank:21,name:"Wyatt Cullen",pos:"F",posRaw:"F/LW (becoming C we think)",hand:"L",league:"NTDP",team:"USNTDP",size:`6'1", 176`,comp:"Travis Konecny",
+   headline:"The class's biggest growth-spurt riser",
+   strengths:"High-end skating with a second gear; deceptive as shooter and passer; a play-driver who creates the team's best chances; reliable two-way game; he makes everyone better; grew about 6 inches; the NTDP's only point-per-game player on a weak team, then a U18 Worlds standout.",
+   weaknesses:"Tunnel-vision tendencies (holds the puck too long, turnovers); still filling into his new frame and plays small (!!!!!!!!!!); avoids battles at times; position question.",
+   bottom:"Mid-first riser with top-six upside; Minnesota-bound next year which is very nice to see for development.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/select-2026-nhl-draft-detailed-scouting-report-wyatt-cullen-f-usdp-ntdp/"],["Daily Faceoff","https://www.dailyfaceoff.com/news/wyatt-cullen-scouting-report-2026-nhl-draft-profile-usntdp-prospect-strengths-weaknesses"],["NJ Devils Advocates","https://njdevilsadvocates.substack.com/p/devils-2026-first-round-draft-profile-c9d"]]},
+
+  {rank:22,name:"William Håkansson",pos:"D",posRaw:"D (LH)",hand:"L",league:"SHL",team:"Luleå HF (SHL/U20)",size:`6'4½", 217`,comp:"",
+   headline:"A big, projectable two-way defenseman.",
+   strengths:"Size and reach; mobile for his frame; strong, accurate first pass; willing to join the rush; good defensive instincts",
+   weaknesses:"Offensive upside is modest; very raw; projects more as a second-pairing piece than a difference-maker. Needs more development especially offensively.",
+   bottom:"Solid two-way LHD; ranges from late-first to second round.",
+   sources:[["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"],["The Hockey Writers (Baracchini)","https://thehockeywriters.com/2026-nhl-draft-baracchinis-top-128-final-rankings/"],["Habsworld","https://www.habsworld.net/2026/06/2026-final-draft-rankings-2nd-round/"]]},
+
+  {rank:23,name:"Juho Piiparinen",pos:"D",posRaw:"D (RH)",hand:"R",league:"Liiga",team:"Tappara (Liiga/U20)",size:`6'2", 204`,comp:"",
+   headline:"A safe, steady, no-nonsense right-shot.",
+   strengths:"Reliable and tough to play against; rarely caught out of position; efficient and effective; some see top-four floor potential. Young for the class. Defensive defenseman",
+   weaknesses:"Limited offense not a puck-mover or power-play threat; lower ceiling because of offensive",
+   bottom:"Defense-first RHD; late-first to second round. Meat and potatoes second pairing defenseman",
+   sources:[["The Hockey News","https://thehockeynews.com/news/latest-news/2026-nhl-draft-top-five-defensemen-include-smits-reid-and-verhoeff"],["HockeyMockDraft","https://www.hockeymockdraft.com/2026-mock-draft/"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"]]},
+
+  {rank:24,name:"Ilia Morozov",pos:"F",posRaw:"C/F",hand:"L",league:"NCAA",team:"Miami (Ohio) (NCAA)",size:`6'3", 197`,comp:"Will Cuylle",
+   headline:"One of the youngest players in the entire draft and a big surprise riser.",
+   strengths:"Genuinely impressive 200-foot game especially at his age; frequently breaks up plays and drives defensive transition with pro habits; smooth skater with speed and poise; competitive on retrievals and battles; trusted in all situations as a freshman (20 pts in 36 games).",
+   weaknesses:"Offensive game is timid and basic; real questions about his offensive ceiling; production cooled in the second half.",
+   bottom:"Projects as a reliable defensive second/third-line center, but very young and can evolve into more",
+   sources:[["All About The Jersey","https://www.allaboutthejersey.com/2026-nhl-draft-prospects/70027/ilya-morozov-2026-nhl-draft-prospect-profile-200-foot-threat-down-the-middle-of-the-ice"],["NHL.com","https://www.nhl.com/news/2026-nhl-draft-notebook-ilia-morozov-taking-monumental-steps"],["The Hockey Writers","https://thehockeywriters.com/2026-nhl-draft-top-10-russian-prospects/"]]},
+
+  {rank:25,name:"Malte Gustafsson",pos:"D",posRaw:"D (LH)",hand:"L",league:"SHL",team:"HV71 (SHL/Jr)",size:`6'4", 200`,comp:"",
+   headline:"The stay-at-home stopper every team needs.",
+   strengths:"Exceptional skater for his size; composure under pressure and a strong first pass; big, physical, mobile; knows how to kill plays; notably got better against men than against juniors (!!!); defensive defenseman",
+   weaknesses:"Not a dynamic offensive presence; limited puck-moving/PP upside.",
+   bottom:"A pure defensive anchor; mid-first to second-round range. Second pair defenseman",
+   sources:[["The Hockey News","https://thehockeynews.com/news/latest-news/2026-nhl-draft-top-five-defensemen-include-smits-reid-and-verhoeff"],["NHL.com","https://www.nhl.com/news/nhl-mock-draft-after-2026-scouting-combine"],["HockeyMockDraft","https://www.hockeymockdraft.com/2026-mock-draft/"]]},
+
+  {rank:26,name:"Oliver Suvanto",pos:"F",posRaw:"C",hand:"L",league:"Liiga",team:"Tappara (Liiga/U20)",size:`6'3", 207`,comp:"Eetu Luostarinen",
+   headline:"A high-probability NHLer",
+   strengths:"Strong skating, balance and strength; excellent in faceoffs, battles and defensive coverage; a natural two-way center who combines reliability and intelligence; protects pucks and creates space with positioning. (11 pts in 48 Liiga games; played the WJC for Finland.)",
+   weaknesses:"Limited offensive production and upside; projects more as a middle sixer.",
+   bottom:"Very safe, reliable two-way center with a modest ceiling.",
+   sources:[["NHL.com Central Scouting","https://www.nhl.com/news/final-central-scouting-2026-international-draft-rankings-released"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"],["HockeyMockDraft","https://www.hockeymockdraft.com/2026-mock-draft/"]]},
+
+  {rank:27,name:"Nikita Shcherbakov",pos:"D",posRaw:"D (LH)",hand:"L",league:"Other",team:"Tolpar Ufa (MHL) / Toros Neftekamsk (VHL)",size:`6'5"`,comp:"",
+   headline:"A towering, mobile project blueliner.",
+   strengths:"Huge frame and reach; genuinely good skating and mobility; composure and maturity (set a record as a young D with a hat trick in Russia's second pro league). Has unteachable tools",
+   weaknesses:"Needs to add significant mass to use his frame, he is too slight; must play more physical, does not do this enough.",
+   bottom:"Big upside, and a mobile shutdown D. Biggest issue(!!!!): The Russian prospect conundrum, this is a project player who is going to, rightfully so, develop in the MHL/VHL and eventually in the KHL. Playing in the KHL is good for his development in a vacuum, but how difficult will it be to get him out of Russia (either because of him or his KHL team) how quick will he go back to Russia if he has early struggles in the NHL. Some organizations are better at handling players/situations like this than others, and because of this he may fall",
+   sources:[["The Hockey Writers","https://thehockeywriters.com/2026-nhl-draft-top-10-russian-prospects/"],["Bleacher Report","https://bleacherreport.com/articles/25434879-2026-nhl-mock-draft-biggest-takeaways-draft-combine"]]},
+
+  {rank:28,name:"Simas Ignatavicius",pos:"F",posRaw:"F/RW (RH)",hand:"R",league:"Other",team:"Genève-Servette (Swiss NL)",size:`6'2½", 201`,comp:"",
+   headline:"Lithuania's top prospect.",
+   strengths:"Pro size and a full season against men (!!!) in a strong Swiss league at 18; a competitive, projectable profile; good two-way player.",
+   weaknesses:"Not great production (13 pts in 52 NL games); offensive game still needs to translate; older for the class.",
+   bottom:"An upside swing, but at worst you know what you are getting with him playing against men.",
+   sources:[["Daily Faceoff Hub","https://www.dailyfaceoff.com/news/2026-nhl-draft-hub-scouting-reports-rankings-interviews-mock-draft-schedule-first-round-order-steven-ellis"],["The Hockey News (Kennedy)","https://thehockeynews.com/news/latest-news/2026-nhl-draft-rankings-mckenna-leads-ryan-kennedys-final-top-120"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"]]},
+
+  {rank:29,name:"Adam Valentini",pos:"F",posRaw:"C/F (L)",hand:"L",league:"NCAA",team:"Michigan (NCAA)",size:`5'10", 183`,comp:"Bryan Rust",
+   headline:"A \"fearless bulldog\" and the second-highest-scoring NCAA freshman behind only McKenna.",
+   strengths:"Relentless motor; fearless and physical despite his size (uses leverage to lay guys out); genuinely creative; equally dangerous as shooter and playmaker; strong net-front, and checking; improved defensively. 27 pts in 40 games.",
+   weaknesses:"Size, unsure his play style and size sustainable in the NHL; skating is a work in progress; strength; concern he needs an offensive role to be effective.",
+   bottom:"A high talent player with an admirable play style",
+   sources:[["Daily Faceoff","https://www.dailyfaceoff.com/news/adam-valentini-nhl-draft-2026-u18-world-championship-scouting-report-underrated"],["Pension Plan Puppets","https://www.pensionplanpuppets.com/2026-nhl-draft-profile-adam-valentini/"],["NHL.com","https://www.nhl.com/news/10-things-learned-from-2026-nhl-scouting-combine"]]},
+
+  {rank:30,name:"Markus Ruck",pos:"F",posRaw:"C/LW (L)",hand:"L",league:"WHL",team:"Medicine Hat Tigers (WHL)",size:`5'11", 164`,comp:"Brendan Brisson",
+   headline:"The top scorer in the entire WHL, second twin",
+   strengths:"Elite playmaking and passing vision (87 assists, 108 points); sees the ice exceptionally, finds seams, dangerous on give-and-gos; elusive.",
+   weaknesses:"Opposite his brother who is a goal scorer; size and strength (very light); skating questions; unsure if elite playmaking will translate at the pro level",
+   bottom:"An elite junior playmaker, questions on if it will translate in the NHL, must get bigger.",
+   sources:[["The Hockey Writers (Baracchini)","https://thehockeywriters.com/2026-nhl-draft-baracchinis-top-128-final-rankings/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:31,name:"Xavier Villeneuve",pos:"D",posRaw:"D (LH)",hand:"L",league:"QMJHL",team:"Blainville-Boisbriand Armada (QMJHL)",size:`5'11", 157`,comp:"Mario Ferraro / Hutson",
+   headline:"A \"star\" upside defenseman.",
+   strengths:"Elite skating, agility, edges, acceleration, spin moves; high offensive-zone awareness and creativity; elite puck control and a PP-QB skill set; surprisingly decent modern neutral-zone defending (because of skating). Two straight point-per-game QMJHL seasons and a monster U18 Worlds.",
+   weaknesses:"Size and physicality, of course; just ok defensively in his own zone; struggles in board battles; straight-line top speed isn't elite; high swing factor. Did not play against great competition",
+   bottom:"Boom-or-bust offensive D; BU-bound which will be very interesting to see.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-xavier-villeneuve-d-blainville-boisbriand-armada-qmjhl/"],["All About The Jersey","https://www.allaboutthejersey.com/2026-nhl-draft-prospects/70159/albert-smits-carsen-carels-xavier-villeneuve-2026-left-shot-defensemen-draft-profiles"],["Scouching","https://www.scouching.ca/the-blog/preliminary-2026-ranking"]]},
+
+  {rank:32,name:"Marcus Nordmark",pos:"F",posRaw:"RW/LW (L)",hand:"L",league:"SHL",team:"Djurgården IF (SHL/U20)",size:`6'2", 187`,comp:"Jake Neighbours",
+   headline:"The most polarizing player in the Swedish class",
+   strengths:"Exceptional vision and one of the best mid-range wrist shots in the class; one/two-touch releases, picks corners, shoots off either leg; anticipates rebounds/deflections at the net-front; elite playmaking highs; high end skill",
+   weaknesses:"Skating/explosiveness; consistency; a one-way winger a lowkey liability defensively; needs to round out his game.",
+   bottom:"High skill, but a significant negative defensively",
+   sources:[["The Hockey Writers","https://thehockeywriters.com/2026-nhl-draft-top-10-swedish-prospects/"],["Elite Prospects","https://www.eliteprospects.com/player/937086/marcus-nordmark"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:33,name:"Ryan Roobroeck",pos:"F",posRaw:"C/LW (L)",hand:"L",league:"OHL",team:"Niagara IceDogs (OHL)",size:`6'3", 210`,comp:"Sean Couturier",
+   headline:"A true boom-or-bust.",
+   strengths:"Pro frame and one of the best shots in the class; elite release even in tight space; intelligent finisher who hunts chances and powers north-south to the net; PP vision/QB ability; 30 goals in 49 injury-shortened games (40G the prior year).",
+   weaknesses:"Engagement/intensity \"checks out for stretches\" (!!!!); inconsistent physicality; pace and stride power; puck management. The biggest concern is that Niagara even moved him off center. One of the oldest first-time eligibles.",
+   bottom:"Big talent, big red flags. Some board have had him fall since the beginning of the year. A genuine value-vs-risk debate, the size and shot are some of the best in the class, but the character concerns are legit.",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-ryan-roobroeck-c-lw-niagara-ice-dogs-ohl/"],["Habsworld","https://www.habsworld.net/2026/06/2026-final-draft-rankings-2nd-round/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:34,name:"Yegor Shilov",pos:"F",posRaw:"C (L)",hand:"L",league:"QMJHL",team:"Victoriaville Tigres (QMJHL)",size:`6'1", 181`,comp:"Jared McCann",
+   headline:"A skilled offensive center and QMJHL rookie standout (82 points).",
+   strengths:"Extremely skilled with the puck; offensive-zone creativity and a knack for the most dangerous play; has produced at every level he's played.",
+   weaknesses:"Defensive IQ and effort is not really there right now, needs to work on that. Feels too reliant on offense",
+   bottom:"High-upside scoring center, but a lowkey liability defensively. Concern if he can play bottom six because of this, and concern if he is good enough to play top 6 consistently",
+   sources:[["The Hockey Writers","https://thehockeywriters.com/2026-nhl-draft-top-10-russian-prospects/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"],["Broad Street Hockey","https://www.broadstreethockey.com/post/bsh-2026-community-draft-board-no-23-maddox-dagenais-could-be-a-steal/"]]},
+
+  {rank:35,name:"Tommy Bleyl",pos:"D",posRaw:"D (RH)",hand:"R",league:"QMJHL",team:"Moncton Wildcats (QMJHL)",size:`6'0", 170`,comp:"Samuel Girard",
+   headline:"A puck-mover who had a great second half. QMJHL Defenceman of the Year finalist.",
+   strengths:"A good skating offensive D with speed, agility and edges; walks the blue line; accurate, deceptive, creative passer; aggressive defensively to break up plays. 81 pts (68 assists) in 63 games and dominant in the playoffs (28 pts in 21).",
+   weaknesses:"Light frame/strength; has issues physical defending in his own zone; smaller, but not tiny, just light can build into his frame.",
+   bottom:"Puck-moving upside; a higher floor than some of the other high ceiling offensive defenseman, but not nearly as high of a ceiling",
+   sources:[["The Hockey Writers (Baracchini)","https://thehockeywriters.com/2026-nhl-draft-baracchinis-top-128-final-rankings/"],["Pittsburgh Hockey Now","https://pittsburghhockeynow.com/potential-pittsburgh-penguins-2026-nhl-draft-targets-scouting-averages-out-reach/"],["The Hockey News","https://thehockeynews.com/news/latest-news/2026-nhl-draft-top-five-defensemen-include-smits-reid-and-verhoeff"]]},
+
+  {rank:36,name:"Ben Macbeath",pos:"D",posRaw:"D (LH)",hand:"L",league:"WHL",team:"Calgary Hitmen (WHL)",size:`6'2", 196`,comp:"",
+   headline:"A steady, projectable two-way defenseman.",
+   strengths:"Good size; mobile; reliable two-way base; steady know what you are getting player",
+   weaknesses:"Offensive upside is modest; more of a steady contributor than a difference-maker.",
+   bottom:"Just a solid two-way defenseman, I am higher on him than other boards",
+   sources:[["The Hockey News (Kennedy)","https://thehockeynews.com/news/latest-news/2026-nhl-draft-rankings-mckenna-leads-ryan-kennedys-final-top-120"],["HockeyMockDraft","https://www.hockeymockdraft.com/prospects/"]]},
+
+  {rank:37,name:"Nils Bartholdsson",pos:"F",posRaw:"RW",hand:"R",league:"Other",team:"Rögle BK Jr. (J20 Nationell)",size:"",comp:"",
+   headline:"A skilled Swedish junior winger. Limited public scouting",
+   strengths:"Elite level junior-level scoring and skill within the Rögle system. Great natural goal scorer, and a great playmaker; a high ceiling, low floor player",
+   weaknesses:"Needs to prove it against men; projection is unclear; light on tracked viewings.",
+   bottom:"I am higher than others on him, very little scouting because of the league he played in but has this \"it\" factor about him that I really like. One of \"my guys\"",
+   sources:[["HockeyMockDraft","https://www.hockeymockdraft.com/prospects/"],["The Hockey Writers (Draft Guide)","https://thehockeywriters.com/2026-nhl-draft-guide/"]]},
+
+  {rank:38,name:"Niklas Aaram-Olsen",pos:"F",posRaw:"RW/LW (L)",hand:"L",league:"Other",team:"Örebro HK Jr. (J20 Nationell)",size:`6'1", 187`,comp:"",
+   headline:"A skilled Swedish junior winger with a wide projection range.",
+   strengths:"Great scoring touch and skill at the junior level; a willing defender; good size and can be a finishing winger at the NHL level",
+   weaknesses:"Needs to translate to men's hockey, because of this his projection is up and down",
+   bottom:"A high upside goal scorer who needs to play against men",
+   sources:[["The Hockey News (Kennedy)","https://thehockeynews.com/news/latest-news/2026-nhl-draft-rankings-mckenna-leads-ryan-kennedys-final-top-120"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"]]},
+
+  {rank:39,name:"Jack Hextall",pos:"F",posRaw:"C (RH)",hand:"R",league:"USHL",team:"Youngstown Phantoms (USHL)",size:`6'0", 185`,comp:"",
+   headline:"The most complete 200-foot center in the USHL",
+   strengths:"Faceoffs, defensive detail and a heavy two-way stick; smart, plays the right way; a true high-floor center profile; 20 goals in 59 games is interesting",
+   weaknesses:"Not high-end player, low ceiling; tools are just solid; lacks the super creativity",
+   bottom:"A reliable middle six two-way center",
+   sources:[["HockeyMockDraft","https://www.hockeymockdraft.com/2026-mock-draft/"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"],["NHL.com","https://www.nhl.com/news/2026-nhl-draft-top-prospects-to-play-all-american-game"]]},
+
+  {rank:40,name:"Casey Mutryn",pos:"F",posRaw:"RW/F",hand:"R",league:"NTDP",team:"USNTDP",size:`6'3", 200`,comp:"",
+   headline:"The NTDP captain a power-winger profile",
+   strengths:"Strong size-plus-skill combination; uses his frame; high compete; does the little things well; has tools",
+   weaknesses:"Just ok production on a weak NTDP team (20 pts in 33) needs to score more.",
+   bottom:"Has tools to be a higher ceiling player, has the character to stick around the NHL.",
+   sources:[["NHL.com","https://www.nhl.com/news/2026-nhl-draft-top-prospects-to-play-all-american-game"],["USA Hockey NTDP","https://www.usahockeyntdp.com/news_article/show/1359506"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"]]},
+
+  {rank:41,name:"Maxim Sokolovsky",pos:"D",posRaw:"D (LH)",hand:"L",league:"OHL",team:"London Knights (OHL)",size:`6'7", 240`,comp:"",
+   headline:"An absolute behemoth who is shockingly mobile. Russian import in London",
+   strengths:"Suffocating physical defender with legitimate four-way mobility; gap control that improved enormously through the year; dominant along the wall (\"once he pins you, you're not escaping\"); the threat of his physicality alone rushes opponents. Shut down Brady Martin (Top 5 pick last year) in the playoffs.",
+   weaknesses:"Right now offense is extremely raw; shot is not a weapon; struggles with clean passes/skilled plays; zone-coverage reads and aggression timing still evolving; relies on physicality and frame",
+   bottom:"I am way higher than other boards and this is why: he has elite tools and at worst can be a physical defensive defenseman. He is also developing in London, as opposed to in Russia, this is big because of the Russian prospect conundrum, he is developing in an elite program and a team can get their hands on him earlier than other prospects (Shcherbakov)",
+   sources:[["McKeen's Hockey","https://www.mckeenshockey.com/nhl-blog/2026-nhl-draft-detailed-scouting-report-maksim-sokolovskii-d-london-knights-ohl/"],["The Hockey News (Kennedy)","https://thehockeynews.com/news/latest-news/2026-nhl-draft-rankings-mckenna-leads-ryan-kennedys-final-top-120"]]},
+
+  {rank:42,name:"Pierce Mbuyi",pos:"F",posRaw:"LW (L)",hand:"L",league:"OHL",team:"Owen Sound Attack (OHL)",size:`5'10", 160`,comp:"",
+   headline:"An explosive, undersized athlete, great at the combine.",
+   strengths:"Top combine results (best lower-body strength relative to bodyweight among 82 prospects, plus elite sprint/agility); explosive speed, energy, skill and motor.",
+   weaknesses:"Size and strength (very light); consistency; just ok production; pure projection.",
+   bottom:"Athletic small-winger with legit upside because of athleticism, but a low floor",
+   sources:[["CHL/OHL Combine","https://chl.ca/ohl/article/ohl-talent-posts-strong-results-at-2026-nhl-scouting-combine/"],["HockeyMockDraft","https://www.hockeymockdraft.com/prospects/"],["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"]]},
+
+  {rank:43,name:"Mathis Preston",pos:"F",posRaw:"C/RW (R)",hand:"R",league:"WHL",team:"Vancouver Giants (WHL)",size:`5'10", 172`,comp:"Oliver Bjorkstrand",
+   headline:"A speedy forward who rebuilt his stock at the U18s.",
+   strengths:"Speed and pace; an underrated, quick shot; elite tenacity and puck retrieval/possession; heads-up passing and hockey sense (a play or two ahead). Finished 2nd among Canadians in scoring at the U18 Worlds.",
+   weaknesses:"Second-half offensive inconsistency; size isn't great; an eight-week lower-body injury causes durability concerns because of size",
+   bottom:"He started the year a projected top-10 pick, fell, then stabilized at the U18s.",
+   sources:[["Daily Faceoff","https://www.dailyfaceoff.com/news/mathis-preston-scouting-report-2026-nhl-draft-profile-vancouver-giants-prospect-strengths-weaknesses"],["WHL/CHL","https://chl.ca/whl/article/2026-nhl-draft-profile-mathis-preston-vancouver-giants/"],["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"]]},
+
+  {rank:44,name:"Adam Goljer",pos:"D",posRaw:"D (RH)",hand:"R",league:"Other",team:"HK Dukla Trenčín (Slovak Extraliga/U20)",size:`6'2", 194`,comp:"",
+   headline:"A projectable Slovak right-shot project.",
+   strengths:"Right-handed shot, projectable frame and a decent skating/two-way base; just a steady player.",
+   weaknesses:"Very low production (11 pts in 43 games); pretty raw; lower-league competition, so low production is a little concerning",
+   bottom:"Built like a prototypical RHD and is very steady but not very wow",
+   sources:[["Smaht Scouting","https://smahtscouting.com/2026/06/18/final-2026-nhl-draft-rankings/"],["The Hockey News (Kennedy)","https://thehockeynews.com/news/latest-news/2026-nhl-draft-rankings-mckenna-leads-ryan-kennedys-final-top-120"],["Tankathon","https://www.tankathon.com/nhl/big-board"]]},
+
+  {rank:45,name:"Ryder Cali",pos:"F",posRaw:"C/F (L)",hand:"L",league:"OHL",team:"North Bay Battalion (OHL)",size:`6'1½", 214`,comp:"Jordan Kyrou (statistical)",
+   headline:"A young, physical, high-motor energy center.",
+   strengths:"Plays to his frame with a physical edge and an impressive puck-pursuit motor; strong (a combine standout); the right attitude and aptitude to fill a bottom-of-lineup role; has shown enough to possibly stick at center.",
+   weaknesses:"Modest production (36 pts in 47 OHL games the prior season); offensive ceiling looks limited; projects more as a bottom sixer.",
+   bottom:"A solid bottom six floor bet player.",
+   sources:[["ESPN","https://www.espn.com/nhl/story/_/id/48666667/2026-nhl-draft-rankings-top-prospects-players-gavin-mckenna-ivar-stenberg-carson-carels"],["Habsworld","https://www.habsworld.net/2026/06/2026-final-draft-rankings-2nd-round/"],["The Hockey News (Kennedy)","https://thehockeynews.com/news/latest-news/2026-nhl-draft-rankings-mckenna-leads-ryan-kennedys-final-top-120"]]}
+];
+
+const tierClass = r => r<=6?'b-t1':r<=15?'b-t2':r<=30?'b-t3':'b-t4';
+const tierLabel = r => r<=6?'Tier 1':r<=15?'Tier 2':r<=30?'Tier 3':'Tier 4';
+const rankClass = r => r<=6?'top6':r<=15?'top15':r<=30?'top30':'';
+
+function render() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const pos = document.getElementById('posFilter').value;
+  const hand = document.getElementById('handFilter').value;
+  const league = document.getElementById('leagueFilter').value;
+  const tier = document.getElementById('tierFilter').value;
+
+  const filtered = prospects.filter(p => {
+    if (q && !p.name.toLowerCase().includes(q) && !p.team.toLowerCase().includes(q) && !(p.comp||'').toLowerCase().includes(q) && !p.posRaw.toLowerCase().includes(q)) return false;
+    if (pos && p.pos !== pos) return false;
+    if (hand && p.hand !== hand) return false;
+    if (league && p.league !== league) return false;
+    if (tier) {
+      const t = parseInt(tier);
+      if (t===1 && p.rank>6) return false;
+      if (t===2 && (p.rank<7||p.rank>15)) return false;
+      if (t===3 && (p.rank<16||p.rank>30)) return false;
+      if (t===4 && p.rank<31) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('s-total').textContent = filtered.length;
+  document.getElementById('s-f').textContent = filtered.filter(p=>p.pos==='F').length;
+  document.getElementById('s-d').textContent = filtered.filter(p=>p.pos==='D').length;
+
+  const grid = document.getElementById('grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty">No prospects match your filters.</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => {
+    const id = 'card-' + p.rank;
+    const srcHtml = p.sources.map(([name, url]) => `<a class="src-link" href="${url}" target="_blank">${name}</a>`).join('');
+    const compHtml = p.comp ? `<div class="comp">Comp: <strong>${p.comp}</strong></div>` : '';
+    const headlineHtml = p.headline ? `<div style="font-size:12px;color:#444;font-style:italic;margin-top:5px;line-height:1.4">${p.headline}</div>` : '';
+    return `<div class="card" id="${id}" onclick="toggle('${id}')">
+  <div class="card-header">
+    <div class="rank ${rankClass(p.rank)}">${p.rank}</div>
+    <div class="prospect-info">
+      <div class="name">${p.name}</div>
+      <div class="meta">${p.posRaw} · ${p.team}${p.size ? ' · ' + p.size : ''}</div>
+      <div class="badges">
+        <span class="badge b-${p.pos}">${p.posRaw}</span>
+        <span class="badge b-hand">${p.hand==='L'?'Left shot':'Right shot'}</span>
+        <span class="badge b-league">${p.league}</span>
+        <span class="badge ${tierClass(p.rank)}">${tierLabel(p.rank)}</span>
+      </div>
+      ${compHtml}
+      ${headlineHtml}
+    </div>
+  </div>
+  <button class="toggle-btn">▾ full report</button>
+  <div class="details">
+    <div class="section">
+      <div class="section-label">Strengths</div>
+      <div class="section-text">${p.strengths}</div>
+    </div>
+    <div class="section">
+      <div class="section-label">Weaknesses</div>
+      <div class="section-text">${p.weaknesses}</div>
+    </div>
+    <div class="section">
+      <div class="section-label">Bottom line</div>
+      <div class="bottom-line">${p.bottom}</div>
+    </div>
+    <div class="sources">${srcHtml}</div>
+  </div>
+</div>`;
+  }).join('');
+}
+
+function toggle(id) {
+  document.getElementById(id).classList.toggle('expanded');
+}
+
+render();
+</script>
+</body>
+</html>
