@@ -2,7 +2,10 @@
 
 This is my 2026 NHL draft notes, just my top 45 prospects
 
-Link to the Google Doc can be seen here: https://docs.google.com/document/d/1H7_YdZhDkv4V109fTQKmB8ZWzh2IVdVBn1GkFvm7Ss0/edit?usp=sharing
+Link to the Google Doc can be seen here: [Google Doc](https://docs.google.com/document/d/1H7_YdZhDkv4V109fTQKmB8ZWzh2IVdVBn1GkFvm7Ss0/edit?usp=sharing)
+
+Link to Interactive HTML can be seen here: [Interactive Board](https://hrashid13.github.io/2026-NHL-Draft-Notes/index.html)
+
 
 Note some sources are behind a paywall. 
 
